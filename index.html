@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>德扑下注面板</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="德扑面板">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="title">德扑下注面板</div>
+  <div class="header-actions">
+    <button id="toggleSettings" class="btn">修改设置</button>
+  </div>
+</header>
+<main class="container">
+  <section id="settingsCard" class="card">
+    <div class="section-title">基础设置</div>
+    <div id="settingsStep1">
+      <div class="grid-2">
+        <label class="field">
+          <span>玩家数量</span>
+          <input id="playerCount" type="number" min="2" value="6">
+        </label>
+      </div>
+      <div class="actions">
+        <button id="toStep2" class="btn primary">下一步：设置玩家代号</button>
+        <button id="resetAll" class="btn danger">重置所有记录</button>
+      </div>
+    </div>
+    <div id="settingsStep2" class="collapsed">
+      <div class="section-subtitle">玩家代号（可修改或直接跳过）</div>
+      <div id="playerNames" class="players-editor"></div>
+      <div class="actions">
+        <button id="toStep3" class="btn primary">下一步：下注参数</button>
+        <button id="skipNames" class="btn">跳过</button>
+      </div>
+    </div>
+    <div id="settingsStep3" class="collapsed">
+      <div class="grid-2">
+        <label class="field">
+          <span>抽底比例 A</span>
+          <input id="rakeRate" type="number" step="0.01" min="0" max="1" value="0.05">
+        </label>
+        <label class="field">
+          <span>底注 E</span>
+          <input id="ante" type="number" step="0.01" min="0" value="1">
+        </label>
+        <label class="field">
+          <span>小盲</span>
+          <input id="smallBlind" type="number" step="0.01" min="0" value="1">
+        </label>
+        <label class="field">
+          <span>大盲 F</span>
+          <input id="bigBlind" type="number" step="0.01" min="0" value="2">
+        </label>
+        <label class="field">
+          <span>每轮下注封顶金额</span>
+          <input id="roundCap" type="number" step="0.01" min="0" value="20">
+        </label>
+      </div>
+      <div class="actions">
+        <button id="applySettings" class="btn primary">完成设置</button>
+        <button id="backToStep2" class="btn">上一步</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">当局操作</div>
+    <div id="positions" class="positions"></div>
+    <div id="seatingList" class="seating-list"></div>
+    <div class="actions">
+      <button id="postAnte" class="btn xl-btn">全体出底注</button>
+      <button id="postBlinds" class="btn xl-btn">下盲注</button>
+      <button id="newHand" class="btn xl-btn primary">开始新一局</button>
+    </div>
+    <div id="playersPanel" class="players-panel"></div>
+    <div class="section-subtitle">选择本局赢家</div>
+    <div id="winnerArea" class="winner-area"></div>
+    <div class="actions">
+      <button id="settleHand" class="btn primary">结算本局</button>
+    </div>
+    <div class="section-subtitle">当局数据面板</div>
+    <div id="handDataPanel" class="hand-data-panel"></div>
+    <div id="barsPanel" class="bars"></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">统计与播报</div>
+    <div id="totals" class="totals"></div>
+    <div class="section-subtitle">历史记录</div>
+    <div id="history" class="history"></div>
+    <div class="section-subtitle">当局明细</div>
+    <div id="handInvestments" class="hand-investments"></div>
+    <div class="actions small-actions">
+      <button id="copyBroadcast" class="btn">复制群播报</button>
+      <button id="exportJSON" class="btn">导出 JSON</button>
+      <button id="exportCSV" class="btn">导出 CSV</button>
+      <button id="correctHand" class="btn">勘误</button>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/web/service-worker.js', { scope: '/web/' })
+      .catch(console.error)
+  }
+</script>
+</body>
+</html>
