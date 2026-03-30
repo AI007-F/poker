@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>德扑下注面板 v2（单文件版）</title>
+  <style>
+:root{--bg:#0f1115;--card:#171922;--text:#e6e6e6;--muted:#a4a8b3;--primary:#4f8cff;--danger:#ff4d5a;--accent:#22c55e;--border:#262938}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+body{touch-action: manipulation}
+.app-header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);z-index:10}
+.app-header .title{padding:12px 16px;font-size:18px;font-weight:600}
+.header-actions{position:absolute;top:8px;right:12px;display:flex;gap:8px}
+.container{max-width:980px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px}
+.section-title{font-size:16px;font-weight:600;margin-bottom:8px}
+.section-subtitle{font-size:14px;color:var(--muted);margin:12px 0 6px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field span{font-size:13px;color:var(--muted)}
+.field input,.field select{padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#12131a;color:var(--text)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.btn{padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:#12131a;color:var(--text);cursor:pointer}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.xl-btn{padding:18px 22px;font-size:18px;border-width:2px}
+.small-actions .btn{padding:8px 12px;font-size:12px}
+.players-editor{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.players-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
+.player-card{border:1px solid var(--border);border-radius:10px;padding:8px;background:#13151c}
+.player-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.player-name{font-weight:600;font-size:16px}
+.player-invest{font-size:13px;color:var(--muted)}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:12px 16px;border-radius:999px;border:1px solid var(--border);background:#12131a;color:var(--text);cursor:pointer;font-size:16px}
+.chip.accent{background:var(--accent);border-color:var(--accent);color:#000}
+.fold-toggle{margin-top:6px;display:flex;gap:6px;align-items:center}
+.totals{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
+.total-item{border:1px solid var(--border);border-radius:10px;padding:8px;background:#13151c}
+.history{display:flex;flex-direction:column;gap:6px}
+.history-item{border:1px solid var(--border);border-radius:10px;padding:8px;background:#13151c}
+.hand-investments{display:flex;flex-wrap:wrap;gap:6px}
+.pill{padding:6px 8px;border-radius:999px;border:1px solid var(--border);background:#12131a;color:var(--text);font-size:13px}
+.positions{border:1px solid var(--border);border-radius:10px;padding:8px;background:#13151c;margin-bottom:8px}
+.seating-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.seat-pill{padding:6px 8px;border-radius:999px;border:1px solid var(--border);background:#12131a;color:var(--text);font-size:13px}
+.hand-data-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
+.collapsed{display:none}
+.winner-area{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.winner-pill{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:999px;border:1px solid var(--border);background:#12131a;color:var(--text);font-size:13px}
+.bars{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.bar-row{display:flex;align-items:center;gap:8px}
+.bar-label{width:72px;font-size:12px;color:var(--muted)}
+.bar{height:16px;border-radius:6px;background:#222;overflow:hidden;flex:1}
+.bar > span{display:block;height:100%;border-radius:6px}
+.bar-pos{background:var(--accent)}
+.bar-neg{background:var(--danger)}
+@media(min-width:900px){.players-panel{grid-template-columns:repeat(4,1fr)}.players-editor{grid-template-columns:repeat(4,1fr)}}
+  </style>
+</head>
+<body>
+<header class="app-header">
+  <div class="title">德扑下注面板 v2（单文件版）</div>
+  <div class="header-actions">
+    <button id="toggleSettings" class="btn">修改设置</button>
+  </div>
+</header>
+<main class="container">
+  <section id="settingsCard" class="card">
+    <div class="section-title">基础设置</div>
+    <div id="settingsStep1">
+      <div class="grid-2">
+        <label class="field">
+          <span>玩家数量</span>
+          <input id="playerCount" type="number" min="2" value="6">
+        </label>
+      </div>
+      <div class="actions">
+        <button id="toStep2" class="btn primary">下一步：设置玩家代号</button>
+        <button id="resetAll" class="btn danger">重置所有记录</button>
+      </div>
+    </div>
+    <div id="settingsStep2" class="collapsed">
+      <div class="section-subtitle">玩家代号（可修改或直接跳过）</div>
+      <div id="playerNames" class="players-editor"></div>
+      <div class="actions">
+        <button id="toStep3" class="btn primary">下一步：下注参数</button>
+        <button id="skipNames" class="btn">跳过</button>
+      </div>
+    </div>
+    <div id="settingsStep3" class="collapsed">
+      <div class="grid-2">
+        <label class="field"><span>抽底比例 A</span><input id="rakeRate" type="number" step="0.01" min="0" max="1" value="0.05"></label>
+        <label class="field"><span>底注 E</span><input id="ante" type="number" step="0.01" min="0" value="1"></label>
+        <label class="field"><span>小盲</span><input id="smallBlind" type="number" step="0.01" min="0" value="1"></label>
+        <label class="field"><span>大盲 F</span><input id="bigBlind" type="number" step="0.01" min="0" value="2"></label>
+        <label class="field"><span>每轮下注封顶金额</span><input id="roundCap" type="number" step="0.01" min="0" value="20"></label>
+      </div>
+      <div class="actions">
+        <button id="applySettings" class="btn primary">完成设置</button>
+        <button id="backToStep2" class="btn">上一步</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">当局操作</div>
+    <div id="positions" class="positions"></div>
+    <div id="seatingList" class="seating-list"></div>
+    <div class="actions">
+      <button id="postAnte" class="btn xl-btn">全体出底注</button>
+      <button id="postBlinds" class="btn xl-btn">下盲注</button>
+      <button id="newHand" class="btn xl-btn primary">开始新一局</button>
+    </div>
+    <div id="playersPanel" class="players-panel"></div>
+    <div class="section-subtitle">选择本局赢家</div>
+    <div id="winnerArea" class="winner-area"></div>
+    <div class="actions">
+      <button id="settleHand" class="btn primary">结算本局</button>
+    </div>
+    <div class="section-subtitle">当局数据面板</div>
+    <div id="handDataPanel" class="hand-data-panel"></div>
+    <div id="barsPanel" class="bars"></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">统计与播报</div>
+    <div id="totals" class="totals"></div>
+    <div class="section-subtitle">历史记录</div>
+    <div id="history" class="history"></div>
+    <div class="section-subtitle">当局明细</div>
+    <div id="handInvestments" class="hand-investments"></div>
+    <div class="actions small-actions">
+      <button id="copyBroadcast" class="btn">复制群播报</button>
+      <button id="exportJSON" class="btn">导出 JSON</button>
+      <button id="exportCSV" class="btn">导出 CSV</button>
+      <button id="correctHand" class="btn">勘误</button>
+    </div>
+  </section>
+</main>
+<script>
+const el = id => document.getElementById(id)
+const fmt = v => (Math.round(v * 100) / 100).toFixed(2)
+const ceilRake = v => Math.ceil(v - 1e-9)
+const defaultChips = [2, 4, 5, 10]
+const sKey = 'poker_explorer_state_v1'
+
+const state = {
+  ui: { showSettings: true, settingsStep: 1 },
+  settings: { playerCount: 6, rakeRate: 0.05, ante: 1, smallBlind: 1, bigBlind: 2, roundCap: 20, names: [], seating: [] },
+  hand: { invests: [], folds: [], dealer: 0, sb: 1, bb: 2, utg: 3 },
+  totals: { rake: 0, nets: [] },
+  history: []
+}
+
+function save() {
+  localStorage.setItem(sKey, JSON.stringify(state))
+}
+
+function load() {
+  const raw = localStorage.getItem(sKey)
+  if (!raw) return
+  const data = JSON.parse(raw)
+  Object.assign(state.settings, data.settings || {})
+  Object.assign(state.hand, data.hand || {})
+  Object.assign(state.totals, data.totals || {})
+  state.history = data.history || []
+  if (!state.ui) state.ui = { showSettings: true, settingsStep: 1 }
+}
+
+function ensureNames() {
+  if (!state.settings.names || state.settings.names.length !== state.settings.playerCount) {
+    state.settings.names = Array.from({ length: state.settings.playerCount }, (_, i) => `P${i + 1}`)
+  }
+  if (!state.settings.seating || state.settings.seating.length !== state.settings.playerCount) {
+    state.settings.seating = Array.from({ length: state.settings.playerCount }, (_, i) => i)
+  }
+}
+
+function initHand() {
+  state.hand.invests = Array.from({ length: state.settings.playerCount }, () => 0)
+  state.hand.folds = Array.from({ length: state.settings.playerCount }, () => false)
+  computePositionsFromDealer()
+}
+
+function initTotals() {
+  state.totals.nets = Array.from({ length: state.settings.playerCount }, () => 0)
+  state.totals.rake = 0
+}
+
+function computePositionsFromDealer() {
+  const n = state.settings.playerCount
+  const order = state.settings.seating
+  const dIdx = state.hand.dealer % n
+  const dSeat = order[dIdx]
+  const sbSeat = order[(dIdx + 1) % n]
+  const bbSeat = order[(dIdx + 2) % n]
+  const utgSeat = order[(dIdx + 3) % n]
+  state.hand.dealer = dSeat
+  state.hand.sb = sbSeat
+  state.hand.bb = bbSeat
+  state.hand.utg = utgSeat
+}
+
+function rotateDealer() {
+  const n = state.settings.playerCount
+  const order = state.settings.seating
+  const currentIndex = order.indexOf(state.hand.dealer)
+  const nextIndex = (currentIndex + 1) % n
+  state.hand.dealer = order[nextIndex]
+  computePositionsFromDealer()
+}
+
+function renderPlayersEditor() {
+  const wrap = el('playerNames')
+  wrap.innerHTML = ''
+  ensureNames()
+  for (let i = 0; i < state.settings.playerCount; i++) {
+    const f = document.createElement('label')
+    f.className = 'field'
+    const s = document.createElement('span')
+    s.textContent = `玩家代号 ${i + 1}`
+    const inp = document.createElement('input')
+    inp.value = state.settings.names[i]
+    inp.addEventListener('change', () => {
+      state.settings.names[i] = inp.value.trim() || `P${i + 1}`
+      renderAll()
+      save()
+    })
+    f.appendChild(s)
+    f.appendChild(inp)
+    wrap.appendChild(f)
+  }
+}
+
+function renderPositions() {
+  const pos = el('positions')
+  const rows = [
+    `庄家(BTN): ${state.settings.names[state.hand.dealer]}`,
+    `小盲(SB): ${state.settings.names[state.hand.sb]}`,
+    `大盲(BB): ${state.settings.names[state.hand.bb]}`,
+    `枪口(UTG): ${state.settings.names[state.hand.utg]}`
+  ]
+  pos.innerHTML = rows.map(r => `<div class="pill">${r}</div>`).join('')
+  renderSeatingList()
+  renderWinnerArea()
+}
+
+function renderSeatingList() {
+  const wrap = el('seatingList')
+  wrap.innerHTML = ''
+  for (let i = 0; i < state.settings.seating.length; i++) {
+    const seat = state.settings.seating[i]
+    const tag = []
+    if (seat === state.hand.dealer) tag.push('BTN')
+    if (seat === state.hand.sb) tag.push('SB')
+    if (seat === state.hand.bb) tag.push('BB')
+    if (seat === state.hand.utg) tag.push('UTG')
+    const div = document.createElement('div')
+    div.className = 'seat-pill'
+    div.textContent = `${i + 1}. ${state.settings.names[seat]}${tag.length ? ' [' + tag.join(',') + ']' : ''}`
+    wrap.appendChild(div)
+  }
+}
+
+function addInvest(i, amount) {
+  if (amount <= 0) return
+  const cap = state.settings.roundCap || Infinity
+  const next = Math.min(state.hand.invests[i] + amount, cap)
+  state.hand.invests[i] = next
+  renderInvestments()
+  renderPlayersPanel()
+  save()
+}
+
+function toggleFold(i) {
+  state.hand.folds[i] = !state.hand.folds[i]
+  renderPlayersPanel()
+  save()
+}
+
+function postAnte() {
+  for (let i = 0; i < state.settings.playerCount; i++) addInvest(i, state.settings.ante)
+}
+
+function postBlinds() {
+  addInvest(state.hand.sb, state.settings.smallBlind)
+  addInvest(state.hand.bb, state.settings.bigBlind)
+}
+
+function renderPlayersPanel() {
+  const wrap = el('playersPanel')
+  wrap.innerHTML = ''
+  for (let i = 0; i < state.settings.playerCount; i++) {
+    const card = document.createElement('div')
+    card.className = 'player-card'
+    const head = document.createElement('div')
+    head.className = 'player-header'
+    const name = document.createElement('div')
+    name.className = 'player-name'
+    name.textContent = state.settings.names[i]
+    const inv = document.createElement('div')
+    inv.className = 'player-invest'
+    inv.textContent = `当局投入: ${fmt(state.hand.invests[i])}`
+    head.appendChild(name); head.appendChild(inv)
+    const row = document.createElement('div')
+    row.className = 'chip-row'
+    for (const v of defaultChips) {
+      const b = document.createElement('button')
+      b.className = 'chip'
+      b.textContent = `+${v}`
+      b.onclick = () => addInvest(i, v)
+      row.appendChild(b)
+    }
+    const input = document.createElement('input')
+    input.type = 'number'
+    input.step = '0.01'
+    input.min = '0'
+    input.placeholder = '自定义金额'
+    input.style.width = '92px'
+    input.value = '10'
+    const cust = document.createElement('button')
+    cust.className = 'chip accent'
+    cust.textContent = '+自定义'
+    cust.onclick = () => {
+      const val = parseFloat(input.value || '0')
+      if (!isNaN(val)) addInvest(i, val)
+    }
+    row.appendChild(input)
+    row.appendChild(cust)
+    const fold = document.createElement('label')
+    fold.className = 'fold-toggle'
+    const cb = document.createElement('input')
+    cb.type = 'checkbox'
+    cb.checked = state.hand.folds[i]
+    cb.onchange = () => toggleFold(i)
+    const sp = document.createElement('span')
+    sp.textContent = '弃牌'
+    fold.appendChild(cb); fold.appendChild(sp)
+    card.appendChild(head)
+    card.appendChild(row)
+    card.appendChild(fold)
+    wrap.appendChild(card)
+  }
+}
+
+function renderTotals() {
+  const wrap = el('totals')
+  wrap.innerHTML = ''
+  const items = [
+    { k: '赌场总抽底', v: fmt(state.totals.rake) }
+  ]
+  for (const it of items) {
+    const d = document.createElement('div')
+    d.className = 'total-item'
+    d.textContent = `${it.k}: ${it.v}`
+    wrap.appendChild(d)
+  }
+}
+
+function renderHandDataPanel() {
+  const wrap = el('handDataPanel')
+  wrap.innerHTML = ''
+  const rakeItem = document.createElement('div')
+  rakeItem.className = 'total-item'
+  rakeItem.textContent = `赌场总抽底: ${fmt(state.totals.rake)}`
+  wrap.appendChild(rakeItem)
+  for (let i = 0; i < state.settings.playerCount; i++) {
+    const it = document.createElement('div')
+    it.className = 'total-item'
+    it.textContent = `${state.settings.names[i]} 累计: ${fmt(state.totals.nets[i])}`
+    wrap.appendChild(it)
+  }
+  renderBars()
+}
+
+function renderBars() {
+  const wrap = el('barsPanel')
+  if (!wrap) return
+  wrap.innerHTML = ''
+  const arr = state.settings.names.map((name, idx) => ({ name, net: state.totals.nets[idx] || 0 }))
+  arr.sort((a, b) => b.net - a.net)
+  const maxAbs = Math.max(1, ...arr.map(x => Math.abs(x.net)))
+  for (const item of arr) {
+    const row = document.createElement('div'); row.className = 'bar-row'
+    const lab = document.createElement('div'); lab.className = 'bar-label'; lab.textContent = item.name
+    const bar = document.createElement('div'); bar.className = 'bar'
+    const span = document.createElement('span'); span.className = item.net >= 0 ? 'bar-pos' : 'bar-neg'
+    span.style.width = `${Math.min(100, Math.abs(item.net) / maxAbs * 100)}%`
+    bar.appendChild(span)
+    const val = document.createElement('div'); val.className = 'bar-label'; val.textContent = fmt(item.net)
+    row.appendChild(lab); row.appendChild(bar); row.appendChild(val)
+    wrap.appendChild(row)
+  }
+}
+
+function renderInvestments() {
+  const wrap = el('handInvestments')
+  wrap.innerHTML = ''
+  for (let i = 0; i < state.settings.playerCount; i++) {
+    const p = document.createElement('div')
+    p.className = 'pill'
+    p.textContent = `${state.settings.names[i]} 投入 ${fmt(state.hand.invests[i])}${state.hand.folds[i] ? ' (弃牌)' : ''}`
+    wrap.appendChild(p)
+  }
+}
+
+function renderHistory() {
+  const wrap = el('history')
+  wrap.innerHTML = ''
+  for (let i = state.history.length - 1; i >= 0; i--) {
+    const h = state.history[i]
+    const d = document.createElement('div')
+    d.className = 'history-item'
+    const lines = []
+    if (h.split) {
+      const names = h.winners.map(w => state.settings.names[w]).join('、')
+      lines.push(`底池 ${fmt(h.pot)} 抽底 ${fmt(h.rake)} 平局赢家 ${names}`)
+    } else {
+      lines.push(`底池 ${fmt(h.pot)} 抽底 ${fmt(h.rake)} 赢家 ${state.settings.names[h.winner]}`)
+    }
+    lines.push(h.players.map((pv, idx) => `${state.settings.names[idx]} ${fmt(pv)}`).join(' | '))
+    d.textContent = lines.join(' | ')
+    wrap.appendChild(d)
+  }
+}
+
+function broadcastText() {
+  const arr = state.settings.names.map((name, idx) => ({ name, net: state.totals.nets[idx] }))
+  arr.sort((a, b) => b.net - a.net)
+  const head = `群播报（各玩家累计输赢）`
+  const lines = arr.map(x => `${x.name}: ${x.net >= 0 ? '+' : ''}${fmt(x.net)}`)
+  return [head, ...lines].join('\n')
+}
+
+function copyBroadcast() {
+  const txt = broadcastText()
+  if (navigator.clipboard) navigator.clipboard.writeText(txt)
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => {
+    URL.revokeObjectURL(url)
+    a.remove()
+  }, 0)
+}
+
+function exportJSON() {
+  const payload = {
+    meta: { generatedAt: new Date().toISOString() },
+    settings: state.settings,
+    totals: state.totals,
+    history: state.history
+  }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  downloadBlob(blob, `poker_history_${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
+}
+
+function exportCSV() {
+  const lines = []
+  lines.push(['Hand', 'Pot', 'Rake', 'Winners', 'Contributions'].join(','))
+  for (let i = 0; i < state.history.length; i++) {
+    const h = state.history[i]
+    const winners = h.split
+      ? h.winners.map(w => state.settings.names[w]).join('|')
+      : state.settings.names[h.winner]
+    const contribs = h.players.map((pv, idx) => `${state.settings.names[idx]}=${fmt(pv)}`).join(';')
+    lines.push([i + 1, fmt(h.pot), fmt(h.rake), `"${winners}"`, `"${contribs}"`].join(','))
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+  downloadBlob(blob, `poker_history_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`)
+}
+
+function getSelectedWinners() {
+  const inputs = document.querySelectorAll('input[name="winnerCheck"]')
+  const ids = Array.from(inputs).filter(inp => inp.checked).map(inp => parseInt(inp.value, 10))
+  return ids.filter(i => !state.hand.folds[i])
+}
+
+function settleHand() {
+  const winners = getSelectedWinners()
+  if (winners.length === 0) return
+  const pot = state.hand.invests.reduce((a, b) => a + b, 0)
+  const rake = ceilRake(pot * state.settings.rakeRate)
+  const netPot = pot - rake
+  if (winners.length === 1) {
+    const w = winners[0]
+    for (let i = 0; i < state.settings.playerCount; i++) {
+      if (i === w) state.totals.nets[i] += netPot - state.hand.invests[i]
+      else state.totals.nets[i] -= state.hand.invests[i]
+    }
+    state.totals.rake += rake
+    state.history.push({ pot, rake, winner: w, players: [...state.hand.invests], split: false })
+  } else {
+    const share = netPot / winners.length
+    for (let i = 0; i < state.settings.playerCount; i++) {
+      if (winners.includes(i)) state.totals.nets[i] += share - state.hand.invests[i]
+      else state.totals.nets[i] -= state.hand.invests[i]
+    }
+    state.totals.rake += rake
+    state.history.push({ pot, rake, winners, players: [...state.hand.invests], split: true })
+  }
+  rotateDealer()
+  state.hand.invests = Array.from({ length: state.settings.playerCount }, () => 0)
+  state.hand.folds = Array.from({ length: state.settings.playerCount }, () => false)
+  renderWinnerArea()
+  renderAll()
+  save()
+}
+
+function renderWinnerArea() {
+  const area = el('winnerArea')
+  area.innerHTML = ''
+  const n = state.settings.playerCount
+  for (let i = 0; i < n; i++) {
+    const pill = document.createElement('label'); pill.className = 'winner-pill'
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.name = 'winnerCheck'; cb.value = String(i); cb.disabled = !!state.hand.folds[i]
+    const sp = document.createElement('span'); sp.textContent = state.settings.names[i]
+    pill.appendChild(cb); pill.appendChild(sp); area.appendChild(pill)
+  }
+}
+
+function applySettings() {
+  const pc = parseInt(el('playerCount').value, 10)
+  const rr = parseFloat(el('rakeRate').value)
+  const an = parseFloat(el('ante').value)
+  const sb = parseFloat(el('smallBlind').value)
+  const bb = parseFloat(el('bigBlind').value)
+  const rc = parseFloat(el('roundCap').value)
+  state.settings.playerCount = Math.max(2, pc || 6)
+  state.settings.rakeRate = Math.min(Math.max(rr || 0, 0), 1)
+  state.settings.ante = Math.max(an || 0, 0)
+  state.settings.smallBlind = Math.max(sb || 0, 0)
+  state.settings.bigBlind = Math.max(bb || 0, 0)
+  state.settings.roundCap = Math.max(rc || 0, 0)
+  ensureNames()
+  initHand()
+  initTotals()
+  state.history = []
+  state.ui.showSettings = false
+  state.ui.settingsStep = 1
+  renderAll()
+  save()
+}
+
+function toStep2() {
+  const pc = parseInt(el('playerCount').value, 10)
+  state.settings.playerCount = Math.max(2, pc || 6)
+  ensureNames()
+  state.ui.settingsStep = 2
+  renderSettingsSteps(); renderPlayersEditor(); save()
+}
+function toStep3() { state.ui.settingsStep = 3; renderSettingsSteps(); save() }
+function skipNames() { state.ui.settingsStep = 3; renderSettingsSteps(); save() }
+function backToStep2() { state.ui.settingsStep = 2; renderSettingsSteps(); save() }
+
+function resetAll() {
+  initTotals()
+  initHand()
+  state.history = []
+  renderAll()
+  save()
+}
+
+function newHand() {
+  rotateDealer()
+  state.hand.invests = Array.from({ length: state.settings.playerCount }, () => 0)
+  state.hand.folds = Array.from({ length: state.settings.playerCount }, () => false)
+  renderAll()
+  save()
+}
+
+function bindActions() {
+  const s1 = document.getElementById('toStep2'); if (s1) s1.onclick = toStep2
+  const s2 = document.getElementById('toStep3'); if (s2) s2.onclick = toStep3
+  const sk = document.getElementById('skipNames'); if (sk) sk.onclick = skipNames
+  const b2 = document.getElementById('backToStep2'); if (b2) b2.onclick = backToStep2
+  el('applySettings').onclick = applySettings
+  el('resetAll').onclick = resetAll
+  el('postAnte').onclick = postAnte
+  el('postBlinds').onclick = postBlinds
+  el('newHand').onclick = newHand
+  el('settleHand').onclick = settleHand
+  el('copyBroadcast').onclick = copyBroadcast
+  el('exportJSON').onclick = exportJSON
+  el('exportCSV').onclick = exportCSV
+  const ch = document.getElementById('correctHand'); if (ch) ch.onclick = correctHand
+  el('toggleSettings').onclick = () => {
+    state.ui.showSettings = !state.ui.showSettings
+    if (state.ui.showSettings) state.ui.settingsStep = 1
+    renderSettingsVisibility()
+    renderSettingsSteps()
+    save()
+  }
+}
+
+function renderAll() {
+  renderSettingsVisibility()
+  renderSettingsSteps()
+  renderPlayersEditor()
+  renderPositions()
+  renderPlayersPanel()
+  renderTotals()
+  renderHandDataPanel()
+  renderInvestments()
+  renderHistory()
+}
+
+function renderSettingsVisibility() {
+  const card = el('settingsCard')
+  if (!state.ui.showSettings) {
+    card.classList.add('collapsed')
+  } else {
+    card.classList.remove('collapsed')
+  }
+}
+
+function renderSettingsSteps() {
+  const s1 = document.getElementById('settingsStep1')
+  const s2 = document.getElementById('settingsStep2')
+  const s3 = document.getElementById('settingsStep3')
+  if (!s1 || !s2 || !s3) return
+  const step = state.ui.settingsStep || 1
+  s1.classList.toggle('collapsed', step !== 1)
+  s2.classList.toggle('collapsed', step !== 2)
+  s3.classList.toggle('collapsed', step !== 3)
+}
+
+function applyReverse(hand) {
+  const h = hand
+  if (!h) return
+  if (h.split) {
+    const winners = h.winners
+    const pot = h.pot
+    const rake = h.rake
+    const netPot = pot - rake
+    const share = netPot / winners.length
+    for (let i = 0; i < state.settings.playerCount; i++) {
+      if (winners.includes(i)) state.totals.nets[i] -= share - h.players[i]
+      else state.totals.nets[i] += h.players[i]
+    }
+    state.totals.rake -= rake
+  } else {
+    const w = h.winner
+    const pot = h.pot
+    const rake = h.rake
+    const netPot = pot - rake
+    for (let i = 0; i < state.settings.playerCount; i++) {
+      if (i === w) state.totals.nets[i] -= netPot - h.players[i]
+      else state.totals.nets[i] += h.players[i]
+    }
+    state.totals.rake -= rake
+  }
+}
+
+function correctHand() {
+  if (state.history.length === 0) return
+  const input = prompt(`输入要撤销的局号（1-${state.history.length}），留空则撤销上一局；或者输入 "manual" 进入手动更正模式：`)
+  if (input === null) return
+  if (input.trim().toLowerCase() === 'manual') {
+    const r = confirm('手动更正将直接调整累计值，请再次确认继续？')
+    if (!r) return
+    const rakeDeltaStr = prompt('输入抽底调整（负数表示减少抽底），例如 -5：', '0')
+    const rakeDelta = parseFloat(rakeDeltaStr || '0') || 0
+    const playerDeltaStr = prompt('输入玩家调整，格式 name=delta;name=delta。例如：P1=10;P2=-10：', '')
+    if (!confirm('再次确认：将应用上述手动更正')) return
+    state.totals.rake += rakeDelta
+    if (playerDeltaStr && playerDeltaStr.trim()) {
+      const parts = playerDeltaStr.split(';')
+      for (const p of parts) {
+        const [name, deltaRaw] = p.split('=')
+        const idx = state.settings.names.indexOf((name || '').trim())
+        const delta = parseFloat((deltaRaw || '0').trim())
+        if (idx >= 0 && !isNaN(delta)) state.totals.nets[idx] += delta
+      }
+    }
+    renderAll(); save(); return
+  }
+  let idx = input.trim() === '' ? state.history.length : parseInt(input.trim(), 10)
+  if (isNaN(idx) || idx < 1 || idx > state.history.length) return
+  if (!confirm(`确认撤销第 ${idx} 局？该操作将回滚该局的抽底与玩家累计。`)) return
+  const hand = state.history[idx - 1]
+  applyReverse(hand)
+  state.history.splice(idx - 1, 1)
+  renderAll()
+  save()
+}
+
+function main() {
+  load()
+  ensureNames()
+  if (!state.hand.invests || state.hand.invests.length !== state.settings.playerCount) initHand()
+  if (!state.totals.nets || state.totals.nets.length !== state.settings.playerCount) initTotals()
+  document.body.classList.add('touch-large')
+  bindActions()
+  renderAll()
+}
+
+main()
+</script>
+</body>
+</html>
