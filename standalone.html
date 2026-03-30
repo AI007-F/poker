@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>德扑下注面板（单文件版）</title>
+  <style>
+:root{--bg:#0f1115;--card:#171922;--text:#e6e6e6;--muted:#a4a8b3;--primary:#4f8cff;--danger:#ff4d5a;--accent:#22c55e;--border:#262938}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+body{touch-action: manipulation}
+.app-header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);z-index:10}
+.app-header .title{padding:12px 16px;font-size:18px;font-weight:600}
+.header-actions{position:absolute;top:8px;right:12px;display:flex;gap:8px}
+.container{max-width:980px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px}
+.section-title{font-size:16px;font-weight:600;margin-bottom:8px}
+.section-subtitle{font-size:14px;color:var(--muted);margin:12px 0 6px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field span{font-size:13px;color:var(--muted)}
+.field input,.field select{padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#12131a;color:var(--text)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.btn{padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:#12131a;color:var(--text);cursor:pointer}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.xl-btn{padding:18px 22px;font-size:18px;border-width:2px}
+.players-editor{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.players-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
+.player-card{border:1px solid var(--border);border-radius:10px;padding:8px;background:#13151c}
+.player-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.player-name{font-weight:600;font-size:16px}
+.player-invest{font-size:13px;color:var(--muted)}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:12px 16px;border-radius:999px;border:1px solid var(--border);background:#12131a;color:var(--text);cursor:pointer;font-size:16px}
+.chip.accent{background:var(--accent);border-color:var(--accent);color:#000}
+.fold-toggle{margin-top:6px;display:flex;gap:6px;align-items:center}
+.totals{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
+.total-item{border:1px solid var(--border);border-radius:10px;padding:8px;background:#13151c}
+.history{display:flex;flex-direction:column;gap:6px}
+.history-item{border:1px solid var(--border);border-radius:10px;padding:8px;background:#13151c}
+.hand-investments{display:flex;flex-wrap:wrap;gap:6px}
+.pill{padding:6px 8px;border-radius:999px;border:1px solid var(--border);background:#12131a;color:var(--text);font-size:13px}
+.positions{border:1px solid var(--border);border-radius:10px;padding:8px;background:#13151c;margin-bottom:8px}
+.seating-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.seat-pill{padding:6px 8px;border-radius:999px;border:1px solid var(--border);background:#12131a;color:var(--text);font-size:13px}
+.hand-data-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
+.collapsed{display:none}
+@media(min-width:900px){.players-panel{grid-template-columns:repeat(4,1fr)}.players-editor{grid-template-columns:repeat(4,1fr)}}
+  </style>
+</head>
+<body>
+<header class="app-header">
+  <div class="title">德扑下注面板（单文件版）</div>
+  <div class="header-actions">
+    <button id="toggleSettings" class="btn">修改设置</button>
+  </div>
+</header>
+<main class="container">
+  <section id="settingsCard" class="card">
+    <div class="section-title">基础设置</div>
+    <div class="grid-2">
+      <label class="field"><span>玩家数量</span><input id="playerCount" type="number" min="2" value="6"></label>
+      <label class="field"><span>抽底比例 A</span><input id="rakeRate" type="number" step="0.01" min="0" max="1" value="0.05"></label>
+      <label class="field"><span>底注 E</span><input id="ante" type="number" step="0.01" min="0" value="1"></label>
+      <label class="field"><span>小盲</span><input id="smallBlind" type="number" step="0.01" min="0" value="1"></label>
+      <label class="field"><span>大盲 F</span><input id="bigBlind" type="number" step="0.01" min="0" value="2"></label>
+      <label class="field"><span>每轮下注封顶金额</span><input id="roundCap" type="number" step="0.01" min="0" value="20"></label>
+    </div>
+    <div id="playerNames" class="players-editor"></div>
+    <div class="actions">
+      <button id="applySettings" class="btn primary">应用设置</button>
+      <button id="resetAll" class="btn danger">重置所有记录</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">当局操作</div>
+    <div id="positions" class="positions"></div>
+    <div id="seatingList" class="seating-list"></div>
+    <div class="actions">
+      <button id="postAnte" class="btn xl-btn">全体出底注</button>
+      <button id="postBlinds" class="btn xl-btn">下盲注</button>
+      <button id="newHand" class="btn xl-btn primary">开始新一局</button>
+    </div>
+    <div id="playersPanel" class="players-panel"></div>
+    <div class="grid-2">
+      <label class="field"><span>选择本局赢家</span><select id="winnerSelect"></select></label>
+      <label class="field"><span>自定义筹码</span><input id="customChip" type="number" step="0.01" min="0" value="10"></label>
+    </div>
+    <div class="actions">
+      <button id="settleHand" class="btn primary">结算本局</button>
+      <button id="settleSplitHand" class="btn">平局结算</button>
+    </div>
+    <div class="section-subtitle">当局数据面板</div>
+    <div id="handDataPanel" class="hand-data-panel"></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">统计与播报</div>
+    <div id="totals" class="totals"></div>
+    <div class="actions">
+      <button id="copyBroadcast" class="btn">复制群播报</button>
+      <button id="exportJSON" class="btn">导出 JSON</button>
+      <button id="exportCSV" class="btn">导出 CSV</button>
+    </div>
+    <div class="section-subtitle">当局明细</div>
+    <div id="handInvestments" class="hand-investments"></div>
+    <div class="section-subtitle">历史记录</div>
+    <div id="history" class="history"></div>
+  </section>
+</main>
+<script>
+const el = id => document.getElementById(id)
+const fmt = v => (Math.round(v * 100) / 100).toFixed(2)
+const ceilRake = v => Math.ceil(v - 1e-9)
+const defaultChips = [2, 4, 5, 10]
+const sKey = 'poker_explorer_state_v1'
+
+const state = {
+  ui: { showSettings: true },
+  settings: { playerCount: 6, rakeRate: 0.05, ante: 1, smallBlind: 1, bigBlind: 2, roundCap: 20, names: [], seating: [] },
+  hand: { invests: [], folds: [], ties: [], dealer: 0, sb: 1, bb: 2, utg: 3 },
+  totals: { rake: 0, nets: [] },
+  history: []
+}
+
+function save() { try { localStorage.setItem(sKey, JSON.stringify(state)) } catch (e) {} }
+function load() {
+  try {
+    const raw = localStorage.getItem(sKey)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    Object.assign(state.settings, data.settings || {})
+    Object.assign(state.hand, data.hand || {})
+    Object.assign(state.totals, data.totals || {})
+    state.history = data.history || []
+  } catch (e) {}
+}
+function ensureNames() {
+  if (!state.settings.names || state.settings.names.length !== state.settings.playerCount) {
+    state.settings.names = Array.from({ length: state.settings.playerCount }, (_, i) => `P${i + 1}`)
+  }
+  if (!state.settings.seating || state.settings.seating.length !== state.settings.playerCount) {
+    state.settings.seating = Array.from({ length: state.settings.playerCount }, (_, i) => i)
+  }
+}
+function initHand() {
+  state.hand.invests = Array.from({ length: state.settings.playerCount }, () => 0)
+  state.hand.folds = Array.from({ length: state.settings.playerCount }, () => false)
+  state.hand.ties = Array.from({ length: state.settings.playerCount }, () => false)
+  computePositionsFromDealer()
+}
+function initTotals() {
+  state.totals.nets = Array.from({ length: state.settings.playerCount }, () => 0)
+  state.totals.rake = 0
+}
+function computePositionsFromDealer() {
+  const n = state.settings.playerCount
+  const order = state.settings.seating
+  const dIdx = state.hand.dealer % n
+  const dSeat = order[dIdx]
+  const sbSeat = order[(dIdx + 1) % n]
+  const bbSeat = order[(dIdx + 2) % n]
+  const utgSeat = order[(dIdx + 3) % n]
+  state.hand.dealer = dSeat
+  state.hand.sb = sbSeat
+  state.hand.bb = bbSeat
+  state.hand.utg = utgSeat
+}
+function rotateDealer() {
+  const n = state.settings.playerCount
+  const order = state.settings.seating
+  const currentIndex = order.indexOf(state.hand.dealer)
+  const nextIndex = (currentIndex + 1) % n
+  state.hand.dealer = order[nextIndex]
+  computePositionsFromDealer()
+}
+function renderPlayersEditor() {
+  const wrap = el('playerNames')
+  wrap.innerHTML = ''
+  ensureNames()
+  for (let i = 0; i < state.settings.playerCount; i++) {
+    const f = document.createElement('label'); f.className = 'field'
+    const s = document.createElement('span'); s.textContent = `玩家代号 ${i + 1}`
+    const inp = document.createElement('input'); inp.value = state.settings.names[i]
+    inp.addEventListener('change', () => { state.settings.names[i] = inp.value.trim() || `P${i + 1}`; renderAll(); save() })
+    f.appendChild(s); f.appendChild(inp); wrap.appendChild(f)
+  }
+}
+function renderPositions() {
+  const pos = el('positions'), winSel = el('winnerSelect'); winSel.innerHTML = ''
+  for (let i = 0; i < state.settings.playerCount; i++) {
+    const o = document.createElement('option'); o.value = i; o.textContent = state.settings.names[i]; winSel.appendChild(o)
+  }
+  const rows = [
+    `庄家(BTN): ${state.settings.names[state.hand.dealer]}`,
+    `小盲(SB): ${state.settings.names[state.hand.sb]}`,
+    `大盲(BB): ${state.settings.names[state.hand.bb]}`,
+    `枪口(UTG): ${state.settings.names[state.hand.utg]}`
+  ]
+  pos.innerHTML = rows.map(r => `<div class="pill">${r}</div>`).join('')
+  renderSeatingList()
+}
+function renderSeatingList() {
+  const wrap = el('seatingList'); wrap.innerHTML = ''
+  for (let i = 0; i < state.settings.seating.length; i++) {
+    const seat = state.settings.seating[i], tag = []
+    if (seat === state.hand.dealer) tag.push('BTN')
+    if (seat === state.hand.sb) tag.push('SB')
+    if (seat === state.hand.bb) tag.push('BB')
+    if (seat === state.hand.utg) tag.push('UTG')
+    const div = document.createElement('div'); div.className = 'seat-pill'
+    div.textContent = `${i + 1}. ${state.settings.names[seat]}${tag.length ? ' [' + tag.join(',') + ']' : ''}`
+    wrap.appendChild(div)
+  }
+}
+function addInvest(i, amount) {
+  if (amount <= 0) return
+  const cap = state.settings.roundCap || Infinity
+  const next = Math.min(state.hand.invests[i] + amount, cap)
+  state.hand.invests[i] = next
+  renderInvestments(); renderPlayersPanel(); save()
+}
+function toggleFold(i) { state.hand.folds[i] = !state.hand.folds[i]; renderPlayersPanel(); save() }
+function toggleTie(i) { state.hand.ties[i] = !state.hand.ties[i]; renderPlayersPanel(); save() }
+function postAnte() { for (let i = 0; i < state.settings.playerCount; i++) addInvest(i, state.settings.ante) }
+function postBlinds() { addInvest(state.hand.sb, state.settings.smallBlind); addInvest(state.hand.bb, state.settings.bigBlind) }
+function renderPlayersPanel() {
+  const wrap = el('playersPanel'); wrap.innerHTML = ''
+  for (let i = 0; i < state.settings.playerCount; i++) {
+    const card = document.createElement('div'); card.className = 'player-card'
+    const head = document.createElement('div'); head.className = 'player-header'
+    const name = document.createElement('div'); name.className = 'player-name'; name.textContent = state.settings.names[i]
+    const inv = document.createElement('div'); inv.className = 'player-invest'; inv.textContent = `当局投入: ${fmt(state.hand.invests[i])}`
+    head.appendChild(name); head.appendChild(inv)
+    const row = document.createElement('div'); row.className = 'chip-row'
+    for (const v of defaultChips) {
+      const b = document.createElement('button'); b.className = 'chip'; b.textContent = `+${v}`; b.onclick = () => addInvest(i, v); row.appendChild(b)
+    }
+    const cust = document.createElement('button'); cust.className = 'chip accent'; cust.textContent = '+自定义'
+    cust.onclick = () => { const val = parseFloat(el('customChip').value || '0'); if (!isNaN(val)) addInvest(i, val) }
+    row.appendChild(cust)
+    const fold = document.createElement('label'); fold.className = 'fold-toggle'
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = state.hand.folds[i]; cb.onchange = () => toggleFold(i)
+    const sp = document.createElement('span'); sp.textContent = '弃牌'; fold.appendChild(cb); fold.appendChild(sp)
+    const tie = document.createElement('label'); tie.className = 'fold-toggle'
+    const cbt = document.createElement('input'); cbt.type = 'checkbox'; cbt.checked = state.hand.ties[i]; cbt.onchange = () => toggleTie(i)
+    const spt = document.createElement('span'); spt.textContent = '平局赢家'; tie.appendChild(cbt); tie.appendChild(spt)
+    card.appendChild(head); card.appendChild(row); card.appendChild(fold); card.appendChild(tie); wrap.appendChild(card)
+  }
+}
+function renderTotals() {
+  const wrap = el('totals'); wrap.innerHTML = ''
+  const items = [
+    { k: '赌场总抽底', v: fmt(state.totals.rake) },
+    { k: '所有玩家总得失', v: fmt(state.totals.nets.reduce((a, b) => a + b, 0)) }
+  ]
+  for (const it of items) { const d = document.createElement('div'); d.className = 'total-item'; d.textContent = `${it.k}: ${it.v}`; wrap.appendChild(d) }
+}
+function renderHandDataPanel() {
+  const wrap = el('handDataPanel'); wrap.innerHTML = ''
+  const rakeItem = document.createElement('div'); rakeItem.className = 'total-item'; rakeItem.textContent = `赌场总抽底: ${fmt(state.totals.rake)}`; wrap.appendChild(rakeItem)
+  for (let i = 0; i < state.settings.playerCount; i++) { const it = document.createElement('div'); it.className = 'total-item'; it.textContent = `${state.settings.names[i]} 累计: ${fmt(state.totals.nets[i])}`; wrap.appendChild(it) }
+}
+function renderInvestments() {
+  const wrap = el('handInvestments'); wrap.innerHTML = ''
+  for (let i = 0; i < state.settings.playerCount; i++) { const p = document.createElement('div'); p.className = 'pill'; p.textContent = `${state.settings.names[i]} 投入 ${fmt(state.hand.invests[i])}${state.hand.folds[i] ? ' (弃牌)' : ''}`; wrap.appendChild(p) }
+}
+function renderHistory() {
+  const wrap = el('history'); wrap.innerHTML = ''
+  for (let i = state.history.length - 1; i >= 0; i--) {
+    const h = state.history[i], d = document.createElement('div'); d.className = 'history-item'
+    const lines = []
+    if (h.split) { const names = h.winners.map(w => state.settings.names[w]).join('、'); lines.push(`底池 ${fmt(h.pot)} 抽底 ${fmt(h.rake)} 平局赢家 ${names}`) }
+    else { lines.push(`底池 ${fmt(h.pot)} 抽底 ${fmt(h.rake)} 赢家 ${state.settings.names[h.winner]}`) }
+    lines.push(h.players.map((pv, idx) => `${state.settings.names[idx]} ${fmt(pv)}`).join(' | '))
+    d.textContent = lines.join(' | '); wrap.appendChild(d)
+  }
+}
+function broadcastText() {
+  const arr = state.settings.names.map((name, idx) => ({ name, net: state.totals.nets[idx] })).sort((a, b) => b.net - a.net)
+  const head = `群播报（各玩家累计输赢）`, lines = arr.map(x => `${x.name}: ${x.net >= 0 ? '+' : ''}${fmt(x.net)}`)
+  return [head, ...lines].join('\n')
+}
+function copyBroadcast() { const txt = broadcastText(); if (navigator.clipboard) navigator.clipboard.writeText(txt) }
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a'), url = URL.createObjectURL(blob)
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click()
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove() }, 0)
+}
+function exportJSON() {
+  const payload = { meta: { generatedAt: new Date().toISOString() }, settings: state.settings, totals: state.totals, history: state.history }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  downloadBlob(blob, `poker_history_${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
+}
+function exportCSV() {
+  const lines = []; lines.push(['Hand', 'Pot', 'Rake', 'Winners', 'Contributions'].join(','))
+  for (let i = 0; i < state.history.length; i++) {
+    const h = state.history[i], winners = h.split ? h.winners.map(w => state.settings.names[w]).join('|') : state.settings.names[h.winner]
+    const contribs = h.players.map((pv, idx) => `${state.settings.names[idx]}=${fmt(pv)}`).join(';')
+    lines.push([i + 1, fmt(h.pot), fmt(h.rake), `"${winners}"`, `"${contribs}"`].join(','))
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' }); downloadBlob(blob, `poker_history_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`)
+}
+function settleHand() {
+  const winner = parseInt(el('winnerSelect').value, 10); if (state.hand.folds[winner]) return
+  const pot = state.hand.invests.reduce((a, b) => a + b, 0), rake = ceilRake(pot * state.settings.rakeRate), netPot = pot - rake
+  for (let i = 0; i < state.settings.playerCount; i++) { if (i === winner) state.totals.nets[i] += netPot - state.hand.invests[i]; else state.totals.nets[i] -= state.hand.invests[i] }
+  state.totals.rake += rake; state.history.push({ pot, rake, winner, players: [...state.hand.invests], split: false })
+  rotateDealer(); state.hand.invests = Array.from({ length: state.settings.playerCount }, () => 0); state.hand.folds = Array.from({ length: state.settings.playerCount }, () => false); state.hand.ties = Array.from({ length: state.settings.playerCount }, () => false)
+  renderAll(); save()
+}
+function settleSplitHand() {
+  const winners = state.hand.ties.map((v, i) => (v && !state.hand.folds[i] ? i : -1)).filter(i => i >= 0); if (winners.length === 0) return
+  const pot = state.hand.invests.reduce((a, b) => a + b, 0), rake = ceilRake(pot * state.settings.rakeRate), netPot = pot - rake, share = netPot / winners.length
+  for (let i = 0; i < state.settings.playerCount; i++) { if (winners.includes(i)) state.totals.nets[i] += share - state.hand.invests[i]; else state.totals.nets[i] -= state.hand.invests[i] }
+  state.totals.rake += rake; state.history.push({ pot, rake, winners, players: [...state.hand.invests], split: true })
+  rotateDealer(); state.hand.invests = Array.from({ length: state.settings.playerCount }, () => 0); state.hand.folds = Array.from({ length: state.settings.playerCount }, () => false); state.hand.ties = Array.from({ length: state.settings.playerCount }, () => false)
+  renderAll(); save()
+}
+function applySettings() {
+  const pc = parseInt(el('playerCount').value, 10), rr = parseFloat(el('rakeRate').value), an = parseFloat(el('ante').value), sb = parseFloat(el('smallBlind').value), bb = parseFloat(el('bigBlind').value), rc = parseFloat(el('roundCap').value)
+  state.settings.playerCount = Math.max(2, pc || 6); state.settings.rakeRate = Math.min(Math.max(rr || 0, 0), 1); state.settings.ante = Math.max(an || 0, 0); state.settings.smallBlind = Math.max(sb || 0, 0); state.settings.bigBlind = Math.max(bb || 0, 0); state.settings.roundCap = Math.max(rc || 0, 0)
+  ensureNames(); initHand(); initTotals(); state.history = []; state.ui.showSettings = false; renderAll(); save()
+}
+function resetAll() { initTotals(); initHand(); state.history = []; renderAll(); save() }
+function newHand() { rotateDealer(); state.hand.invests = Array.from({ length: state.settings.playerCount }, () => 0); state.hand.folds = Array.from({ length: state.settings.playerCount }, () => false); renderAll(); save() }
+function bindActions() {
+  el('applySettings').onclick = applySettings; el('resetAll').onclick = resetAll; el('postAnte').onclick = postAnte; el('postBlinds').onclick = postBlinds; el('newHand').onclick = newHand
+  el('settleHand').onclick = settleHand; el('settleSplitHand').onclick = settleSplitHand; el('copyBroadcast').onclick = copyBroadcast; el('exportJSON').onclick = exportJSON; el('exportCSV').onclick = exportCSV
+  el('toggleSettings').onclick = () => { state.ui.showSettings = !state.ui.showSettings; renderSettingsVisibility(); save() }
+}
+function renderSettingsVisibility() { const card = el('settingsCard'); if (!state.ui.showSettings) card.classList.add('collapsed'); else card.classList.remove('collapsed') }
+function renderAll() { renderSettingsVisibility(); renderPlayersEditor(); renderPositions(); renderPlayersPanel(); renderTotals(); renderHandDataPanel(); renderInvestments(); renderHistory() }
+function main() { load(); ensureNames(); if (!state.hand.invests || state.hand.invests.length !== state.settings.playerCount) initHand(); if (!state.totals.nets || state.totals.nets.length !== state.settings.playerCount) initTotals(); document.body.classList.add('touch-large'); bindActions(); renderAll() }
+main()
+</script>
+</body>
+</html>
